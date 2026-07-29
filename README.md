@@ -27,6 +27,7 @@ Traditional Virtual Machine (VM) এর তুলনায় Docker container �
 ## 3. Docker এর Architecture (কিভাবে কাজ করে)
 
 Docker একটা **client-server architecture** ব্যবহার করে।
+
 <img width="1233" height="651" alt="image" src="https://github.com/user-attachments/assets/3ed9386d-43b1-4dac-aff7-b2944f3b55a9" />
 
 
