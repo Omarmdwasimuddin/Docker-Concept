@@ -86,6 +86,112 @@ docker run -i -t ubuntu /bin/bash
 
 ---
 
-### পরবর্তী ধাপ
-- [Get Docker (install)](https://docs.docker.com/get-started/get-docker/)
-- [Docker Concepts — Containers, Images, Registry, Compose](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/)
+### 🧩 7.1 Container কি?
+
+ধরো তুমি একটা web app বানাচ্ছো — React frontend, Python API, আর PostgreSQL database। এখন সবার machine-এ same version এর Node, Python, PostgreSQL install থাকা, dependency conflict না হওয়া — এগুলো manage করা রীতিমতো ঝামেলার কাজ।
+
+Container এই সমস্যার সমাধান। Container হলো তোমার app এর প্রতিটা component এর জন্য একটা isolated process — frontend, API, database প্রত্যেকটা নিজের মতো isolated environment এ চলে, একে অপরকে বা host machine কে touch করে না।
+
+Container যেসব কারণে দারুণ:
+
+বৈশিষ্ট্য	মানে কি
+Self-contained	চলার জন্য যা লাগে সব ভেতরেই থাকে, host machine এ কিছু pre-install লাগে না
+Isolated	একটা container অন্য container বা host কে প্রভাবিত করে না — security বাড়ে
+Independent	একটা container delete করলে অন্যগুলোর কিছু হয় না
+Portable	Laptop এ যেভাবে চলবে, data center বা cloud এও ঠিক একইভাবে চলবে
+
+Container vs Virtual Machine (VM): VM হলো পুরো একটা OS — নিজের kernel, driver সহ। শুধু একটা app চালানোর জন্য পুরো VM তোলা অনেক বেশি overhead। Container শুধু একটা isolated process, সব container একই host kernel share করে — তাই অনেক lightweight, কম resource-এ বেশি container চালানো যায়। (তবে practice এ VM আর container একসাথেও ব্যবহার হয় — cloud এ যে machine পাও সেটা সাধারণত একটা VM, আর তার ভেতরে multiple container চলে।)
+
+Basic commands:
+
+```bash
+docker run -d -p 8080:80 docker/welcome-to-docker   # container চালু করা
+docker ps                                            # running container দেখা
+docker ps -a                                         # stopped সহ সব container দেখা
+docker stop <container-id>                           # container বন্ধ করা
+```
+
+### 🖼️ 7.2 Image কি?
+
+Container যেহেতু একটা isolated process, তাহলে সে তার files আর configuration কোথা থেকে পায়? সেটাই হলো Image।
+
+Image হলো একটা standardized package — এতে container চালানোর জন্য দরকারি সব file, binary, library, আর configuration থাকে। যেমন PostgreSQL image এ database binary + config file, আর একটা Python app এর image এ Python runtime + তোমার code + dependency সব থাকে।
+
+দুইটা গুরুত্বপূর্ণ নিয়ম:
+
+Image immutable — একবার বানানোর পর change করা যায় না, শুধু নতুন image বানাতে হয় বা তার উপর নতুন layer add করা যায়।
+Image অনেকগুলো layer দিয়ে তৈরি — প্রতিটা layer একেকটা filesystem change represent করে (add/remove/modify)।
+
+এই কারণে existing image কে base ধরে নিজের app বানানো যায় — যেমন Python image কে base ধরে শুধু তোমার app এর dependency আর code এর layer add করলেই হয়।
+
+Image কোথায় পাবো? Docker Hub — default public registry, ১ লাখেরও বেশি ready image আছে। এখানে কিছু trusted category:
+
+Docker Official Images — curated, সবচেয়ে secure
+Docker Hardened Images — minimal, near-zero vulnerability, production এর জন্য
+Docker Verified Publishers — verified কোম্পানির image
+Docker-Sponsored Open Source — open-source project দের image
+
+Basic commands:
+
+```bash
+docker search docker/welcome-to-docker   # image খোঁজা
+docker pull docker/welcome-to-docker     # image download করা
+docker image ls                          # local এ থাকা image গুলোর list
+docker image history <image>             # image এর layer গুলো দেখা
+```
+
+### 📦 7.3 Registry কি?
+
+Image local machine এ store করা যায়, কিন্তু অন্যদের সাথে share করতে বা অন্য machine এ ব্যবহার করতে হলে দরকার একটা centralized জায়গা — সেটাই Registry।
+
+Registry হলো image store আর share করার centralized location — public বা private দুটোই হতে পারে। Docker Hub হলো default public registry। এছাড়া Amazon ECR, Azure ACR, Google GCR এর মতো অন্য registry-ও আছে, চাইলে নিজের private registry-ও (Harbor, JFrog Artifactory) চালানো যায়।
+
+Registry vs Repository — পার্থক্য কি?
+
+Registry = পুরো storage location (যেমন পুরো Docker Hub)
+Repository = registry এর ভেতরে একটা folder এর মতো, related image গুলো একসাথে রাখা হয় (যেমন একটা project এর বিভিন্ন version/tag)
+
+Registry
+ ├── Repository A (project-a)
+ │     ├── project-a:v1.0
+ │     └── project-a:v2.0
+ └── Repository B (project-b)
+       ├── project-b:v1.0
+       ├── project-b:v1.1
+       └── project-b:v2.0
+
+Basic workflow:
+
+```bash
+docker build -t <username>/my-app .          # Dockerfile থেকে image build
+docker tag <username>/my-app <username>/my-app:1.0   # version tag দেওয়া
+docker push <username>/my-app:1.0            # registry তে push করা
+docker pull <username>/my-app:1.0            # registry থেকে pull করা
+```
+
+### 🧵 7.4 Docker Compose কি?
+
+একটা container চালানো সহজ, কিন্তু বাস্তব app এ একসাথে অনেকগুলো service লাগে — database, cache, message queue ইত্যাদি। প্রতিটা docker run command আলাদা আলাদা চালিয়ে, network configure করে, cleanup করা — বেশ কষ্টের কাজ হয়ে যায়।
+
+নিয়ম: একটা container একটা কাজই ভালোভাবে করবে — সব কিছু এক container এ গুঁজে দেওয়া উচিত না।
+
+Docker Compose দিয়ে তোমার সব container আর তাদের configuration একটা single YAML file (compose.yaml) এ define করা যায়। এই file repo তে রাখলে, যে কেউ repo clone করে একটা মাত্র command দিয়েই পুরো app চালু করতে পারবে।
+
+Compose একটা declarative tool — মানে তুমি শুধু define করে দাও কি চাও, বাকিটা Compose বুঝে নেয়। File এ change করলে আবার docker compose up দিলেই সেটা reconcile করে নেয়।
+
+Dockerfile vs Compose file: Dockerfile দিয়ে image build হয়, Compose file দিয়ে running containers define হয়। প্রায়ই একটা Compose file একটা Dockerfile কে refer করে সেই service এর image বানানোর জন্য।
+
+Basic commands:
+
+```bash
+docker compose up -d --build     # সব service (containers, network, volume সহ) চালু করা
+docker compose down              # সব বন্ধ করে remove করা
+docker compose down --volumes    # volume সহ পুরোপুরি clean করা
+```
+
+docker compose up চালালে একসাথে যা হয়:
+
+দরকারি image গুলো Docker Hub থেকে pull হয়
+App এর জন্য একটা network তৈরি হয়
+Data persist করার জন্য volume তৈরি হয়
+সব container একসাথে start হয়ে যায়
