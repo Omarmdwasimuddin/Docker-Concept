@@ -151,6 +151,7 @@ Registry vs Repository — পার্থক্য কি?
 Registry = পুরো storage location (যেমন পুরো Docker Hub)
 Repository = registry এর ভেতরে একটা folder এর মতো, related image গুলো একসাথে রাখা হয় (যেমন একটা project এর বিভিন্ন version/tag)
 
+```bash
 Registry
  ├── Repository A (project-a)
  │     ├── project-a:v1.0
@@ -159,6 +160,7 @@ Registry
        ├── project-b:v1.0
        ├── project-b:v1.1
        └── project-b:v2.0
+```
 
 Basic workflow:
 
